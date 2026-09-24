@@ -1,0 +1,439 @@
+Lab 1 — Fork-Join & Thread Teams
+
+Student: Akbota Kurman 230103276 
+CSS314 01N-03P 24.09.2026
+Lab: Lab 1 — Fork-Join & Thread Teams
+Language: Java 17+
+⸻
+
+1. Introduction
+
+The purpose of this laboratory work is to study the Fork-Join parallel execution model and investigate how the number of threads affects program execution time and CPU utilization.
+
+The laboratory uses Java’s ForkJoinPool to emulate the behavior of an OpenMP parallel region. The experiments demonstrate thread-team creation, non-deterministic thread scheduling, thread oversubscription, and CPU saturation.
+
+Three experiments were performed:
+
+1. Fork-Join thread team execution with four threads.
+2. Thread oversubscription analysis using 1, 2, 4, 8, 16, 32, and 64 threads.
+3. CPU saturation analysis using a computational workload of 10,000,000 square-root operations per thread.
+
+⸻
+
+2. Task 1.1 — Fork-Join Thread Team
+
+Objective
+
+The objective of this task was to demonstrate the creation of a team of four worker threads and observe the execution order of different logical ranks.
+
+The program used a custom ForkJoinPool with four threads. A parallel stream was used to distribute the work among the threads.
+
+Program Output
+
+The program was executed ten consecutive times.
+
+Run	Execution Order
+1	1 → 3 → 2 → 0
+2	2 → 3 → 1 → 0
+3	2 → 3 → 1 → 0
+4	2 → 3 → 1 → 0
+5	2 → 3 → 0 → 1
+6	2 → 3 → 1 → 0
+7	2 → 3 → 1 → 0
+8	2 → 3 → 1 → 0
+9	2 → 3 → 1 → 0
+10	2 → 3 → 1 → 0
+
+All four logical ranks (0–3) were successfully executed in every run.
+
+Analysis
+
+The execution order was not fixed between all runs. For example, the first run produced the order 1 → 3 → 2 → 0, while the fifth run produced 2 → 3 → 0 → 1.
+
+This demonstrates that parallel threads do not have a guaranteed sequential execution order. The operating system and Fork-Join scheduler determine when individual threads receive CPU execution time.
+
+The final message was printed only after the parallel computation completed because the .join() operation acts as a synchronization point.
+
+Question 1.1 — Scheduling
+
+The thread IDs can appear in different orders because the operating system scheduler determines when each thread gets CPU execution time. After the ForkJoinPool creates the worker threads, they compete for CPU resources, and the scheduler can switch between them depending on CPU availability and scheduling decisions. Therefore, the logical ranks are not guaranteed to print sequentially. The CPU cores execute the scheduled threads, while the operating system manages when each thread runs. This results in non-deterministic execution ordering across consecutive program runs.
+
+⸻
+
+3. Task 1.2 — Thread Oversubscription Sweep
+
+Objective
+
+The objective was to investigate how increasing the number of software threads affects the time required to create, execute, and join the thread team.
+
+The following thread counts were tested:
+
+1, 2, 4, 8, 16, 32, and 64 threads.
+
+Experimental Results
+
+Threads	Time (ms)
+1	10.856
+2	0.465
+4	0.540
+8	0.982
+16	1.447
+32	1.339
+64	4.102
+
+Analysis
+
+The shortest measured time was obtained with two threads at 0.465 ms. Increasing the number of threads beyond two did not continuously improve performance.
+
+The execution time increased to 0.540 ms with four threads, 0.982 ms with eight threads, and 4.102 ms with 64 threads.
+
+The result demonstrates that adding more software threads does not automatically result in better performance. When the thread count becomes large, thread-management and scheduling overhead become increasingly important.
+
+The one-thread result was 10.856 ms, which is significantly higher than the two-thread result. This measurement also includes JVM and ForkJoinPool startup overhead, so it should not be interpreted as a pure measurement of computational speedup.
+
+Question 1.2 — Oversubscription
+
+When the number of software threads exceeds the available physical CPU resources, the operating system must share CPU execution time between multiple threads. This introduces additional scheduling and context-switching overhead. A large number of active threads can also increase cache pressure and reduce the efficiency of cache usage.
+
+Therefore, adding more threads does not necessarily improve performance. In the experiment, the execution time increased from 0.540 ms with four threads to 4.102 ms with 64 threads.
+
+⸻
+
+4. Task 1.3 — CPU Core Saturation Analysis
+
+Objective
+
+The objective of this experiment was to investigate the effect of increasing the number of threads on a computationally intensive workload.
+
+Each thread performed approximately 10,000,000 square-root calculations.
+
+The program was tested with 1, 2, 4, 8, 16, 32, and 64 threads.
+
+Experimental Results
+
+Threads	Execution Time (s)
+1	0.058
+2	0.024
+4	0.062
+8	0.192
+16	0.310
+32	0.695
+64	1.386
+
+Analysis
+
+The execution time decreased from 0.058 seconds with one thread to 0.024 seconds with two threads, showing an initial benefit from parallel execution.
+
+However, increasing the number of threads beyond two resulted in longer execution times. The execution time increased to 0.062 seconds with four threads and reached 1.386 seconds with 64 threads.
+
+This indicates that the tested workload did not benefit from continuously increasing the number of software threads. After a certain point, scheduling, thread-management, and resource-contention overhead became significant.
+
+CPU utilization was also intended to be observed using macOS Activity Monitor during the experiment.
+
+Question 1.3 — CPU Saturation
+
+When the number of software threads exceeds the available CPU resources, multiple threads must compete for the same execution resources. The operating system schedules these threads, which can increase context switching and scheduling overhead. Threads may also compete for cache and memory resources.
+
+As a result, adding more threads can eventually reduce rather than improve performance.
+
+⸻
+
+5. Question 1.4 — Excessive Number of Threads
+
+Too many threads can reduce performance because the CPU has a limited number of cores and hardware threads. When the number of software threads becomes too large, threads compete for CPU resources and the operating system has to perform more scheduling and context switching.
+
+This creates additional overhead and can also increase cache contention. As a result, adding more threads eventually stops improving performance and may make the program slower.
+
+⸻
+
+6. Overall Results
+
+The three experiments demonstrate several important characteristics of parallel programming.
+
+First, the Fork-Join model successfully created a team of worker threads and allowed parallel tasks to execute concurrently. The execution order of logical ranks was not fixed, demonstrating the non-deterministic nature of parallel scheduling.
+
+Second, the thread oversubscription experiment showed that increasing the number of threads does not always improve performance. The measured execution time increased significantly when the thread count reached 64.
+
+Third, the CPU saturation experiment demonstrated that the computational workload benefited from increasing the number of threads only up to a limited point. In this experiment, two threads produced the shortest measured execution time. Further increases in thread count resulted in longer execution times.
+
+⸻
+
+7. Conclusion
+
+This laboratory demonstrated the basic principles of the Fork-Join parallel execution model using Java’s ForkJoinPool.
+
+The experiments showed that parallel execution order is non-deterministic and controlled by the operating system and thread scheduler. The results also demonstrated that increasing the number of software threads does not guarantee better performance.
+
+For the tested workloads, a small number of threads provided better execution times than large thread teams. With 64 threads, both thread-management overhead and resource contention became significant.
+
+Therefore, an appropriate thread count should be selected based on the available CPU resources and characteristics of the workload rather than simply maximizing the number of threads.
+
+Lab 2 — Numerical Integration, Race Conditions and Parallel Reduction
+
+⸻
+
+1. Introduction
+
+The purpose of this laboratory work is to investigate parallel numerical integration and the effect of different synchronization approaches on the calculation of π.
+
+The laboratory focuses on race conditions, critical-section overhead, parallel reduction, strong scaling, speedup, and parallel efficiency.
+
+The following experiments were specified:
+
+1. Task 2.1 — Race Condition Quantification: execute a naive shared accumulation with 1, 2, 4, and 8 threads and measure the numerical error.
+2. Task 2.2 — Critical Section Overhead: compare a single-threaded baseline with a parallel implementation using a critical section for (N=1,000,000).
+3. Task 2.3 — Strong Scaling Benchmark: benchmark the parallel reduction for (P={1,2,4,8,16}) over five trials and calculate the average execution time.
+4. Task 2.4 — Speedup & Efficiency Modeling: calculate speedup and parallel efficiency and compare measured speedup with ideal linear speedup.
+
+⸻
+
+2. Numerical Integration Method
+
+The value of π was calculated using numerical integration of the function
+
+[
+f(x)=\frac{4}{1+x^2}
+]
+
+over the interval from 0 to 1.
+
+The midpoint approximation was used:
+
+[
+x_i=\frac{i+0.5}{N}
+]
+
+and the resulting numerical approximation was obtained by summing the function values and dividing the sum by (N).
+
+The true reference value used for calculating numerical error was:
+
+[
+\pi = 3.141592653589793
+]
+
+⸻
+
+3. Task 2.1 — Race Condition Quantification
+
+Objective
+
+The objective of this task was to demonstrate the effect of a race condition when multiple threads update a shared accumulation variable without synchronization.
+
+The experiment used:
+
+[
+N=1,000,000
+]
+
+and thread counts:
+
+[
+P={1,2,4,8}
+]
+
+Experimental Results
+
+Threads (P)	Calculated π	Absolute Error
+1	3.141592653590	0.000000000000
+2	1.854593312407	1.286999341183
+4	0.922473716069	2.219118937521
+8	1.907723699193	1.233868954396
+
+Analysis
+
+With one thread, the calculated value of π was:
+
+[
+3.141592653590
+]
+
+which produced essentially zero numerical error.
+
+When multiple threads were used, the result deviated significantly from the correct value. The reason is that several threads simultaneously updated the same shared accumulation variable.
+
+The operation
+
+sum[0] += value;
+
+is not an atomic operation. It consists of reading the current value, adding a new value, and writing the result back. If two threads perform these operations at approximately the same time, one update can overwrite another update.
+
+The results show that the error becomes significant when multiple threads access the shared variable concurrently.
+
+It is important to note that the error does not necessarily increase monotonically with the thread count. For example, the error was 2.219118937521 with four threads but decreased to 1.233868954396 with eight threads. This happens because the final result depends on the non-deterministic ordering of concurrent operations.
+
+Conclusion for Task 2.1
+
+The experiment successfully demonstrated a race condition. Unsynchronized shared accumulation produces incorrect numerical results because updates from different threads can be lost.
+
+⸻
+
+4. Task 2.2 — Critical Section Overhead
+
+Objective
+
+The objective of this experiment is to eliminate the race condition by protecting the shared accumulation with a critical section and measure the performance overhead introduced by synchronization.
+
+The required number of integration steps is:
+
+[
+N=1,000,000
+]
+
+The parallel implementation should be compared with a single-threaded baseline.
+
+Results
+
+Implementation	Execution Time (s)
+Single-threaded baseline	[INSERT RESULT]
+Parallel + Critical Section	[INSERT RESULT]
+
+The lock contention overhead is calculated using:
+
+[
+Overhead =
+\frac{T_{critical}-T_{baseline}}
+{T_{baseline}}\times100%
+]
+
+Calculated Overhead
+
+Lock contention overhead: [INSERT %]
+
+Analysis
+
+A critical section prevents multiple threads from modifying the shared accumulation variable simultaneously. This eliminates the race condition and produces a correct numerical result.
+
+However, synchronization introduces additional overhead. Threads must wait when another thread is inside the critical section. Therefore, although the computation is parallelized, access to the shared accumulator becomes a serialized part of the program.
+
+⸻
+
+5. Task 2.3 — Strong Scaling Benchmark
+
+Objective
+
+The objective was to measure the execution time of the parallel reduction for different thread counts.
+
+The required thread counts are:
+
+[
+P={1,2,4,8,16}
+]
+
+Each configuration must be executed five times, and the average execution time must be calculated.
+
+Experimental Results
+
+Threads	Trial 1 (s)	Trial 2 (s)	Trial 3 (s)	Trial 4 (s)	Trial 5 (s)	Average (s)
+1	[ ]	[ ]	[ ]	[ ]	[ ]	[ ]
+2	[ ]	[ ]	[ ]	[ ]	[ ]	[ ]
+4	[ ]	[ ]	[ ]	[ ]	[ ]	[ ]
+8	[ ]	[ ]	[ ]	[ ]	[ ]	[ ]
+16	[ ]	[ ]	[ ]	[ ]	[ ]	[ ]
+
+The average execution time is calculated as:
+
+[
+T_{avg}=\frac{T_1+T_2+T_3+T_4+T_5}{5}
+]
+
+Previously Obtained Variant C Measurement
+
+An initial run of the parallel reduction produced the following results:
+
+Threads	Time (s)
+1	0.3615
+2	0.3167
+4	0.2972
+8	0.3076
+16	0.3026
+
+These measurements represent a single trial for each thread count and therefore do not yet satisfy the required five-trial benchmark.
+
+The minimum time in this initial run was 0.2972 seconds with four threads.
+
+⸻
+
+6. Task 2.4 — Speedup and Efficiency
+
+Objective
+
+The objective is to calculate the speedup and parallel efficiency using the average execution times from Task 2.3.
+
+Speedup is calculated as:
+
+[
+S(P)=\frac{T(1)}{T(P)}
+]
+
+Parallel efficiency is calculated as:
+
+[
+E(P)=\frac{S(P)}{P}
+]
+
+The ideal linear speedup is equal to the number of threads:
+
+[
+S_{ideal}(P)=P
+]
+
+Preliminary Results
+
+Using the currently available single-trial measurements, the preliminary speedup values are:
+
+Threads	Time (s)	Speedup	Efficiency
+1	0.3615	1.00	100.0%
+2	0.3167	1.14	57.1%
+4	0.2972	1.22	30.4%
+8	0.3076	1.18	14.7%
+16	0.3026	1.19	7.4%
+
+These values are preliminary because Task 2.4 should use the five-trial averages from Task 2.3.
+
+Interpretation
+
+The initial results show that the speedup is far below ideal linear scaling.
+
+For example, with four threads the measured speedup was approximately:
+
+[
+S(4)=1.22
+]
+
+while ideal linear speedup would be:
+
+[
+S_{ideal}(4)=4
+]
+
+The difference indicates that increasing the number of threads does not provide proportional performance improvement for this workload.
+
+Possible sources of overhead include thread management, scheduling, synchronization, and limitations in available CPU resources.
+
+⸻
+
+7. Overall Discussion
+
+The experiments demonstrate the importance of synchronization in parallel numerical computation.
+
+The naive shared accumulation produced incorrect values of π when multiple threads were used. This occurred because concurrent updates to the shared accumulator created a race condition.
+
+Synchronization through a critical section can solve the correctness problem, but it introduces performance overhead because only one thread can access the protected section at a time.
+
+Parallel reduction provides a better approach because each thread can perform part of the computation and the partial results can then be combined. However, the available parallelism is still limited by hardware resources and parallelization overhead.
+
+The initial strong-scaling results showed that increasing the number of threads beyond four did not significantly improve execution time. This indicates that the workload reached a point where additional parallelism provided little benefit.
+
+⸻
+
+8. Conclusion
+
+This laboratory demonstrated three important aspects of parallel programming: correctness, synchronization, and scalability.
+
+The race-condition experiment showed that unsynchronized shared variables can produce highly inaccurate numerical results. With one thread, the calculated value of π was accurate, while multiple threads produced substantial errors.
+
+The critical-section experiment is designed to demonstrate how synchronization can restore correctness while introducing additional execution overhead.
+
+The parallel-reduction experiment demonstrated that parallel execution can reduce computation time, but the improvement is not proportional to the number of threads. The initial measurements showed the shortest execution time at four threads, while additional threads produced little or no improvement.
+
+Overall, the experiments demonstrate that effective parallel programming requires a balance between parallelism, synchronization overhead, and available hardware resources.
